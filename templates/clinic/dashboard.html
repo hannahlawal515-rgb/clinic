@@ -1,0 +1,180 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183b34">
+  <title>Queue desk | Careline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'clinic/app.css' %}">
+  <script src="{% static 'clinic/app.js' %}" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="{% url 'clinic:dashboard' %}" aria-label="Careline home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span>careline<span class="brand-period">.</span></span>
+      </a>
+      <div class="workspace-label">CLINIC WORKSPACE</div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <a class="nav-item is-current" href="{% url 'clinic:dashboard' %}" aria-label="Overview" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+          <span>Overview</span>
+        </a>
+        <a class="nav-item" href="#queue-heading" aria-label="Patient queue">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+          <span>Patient queue</span>
+          <span class="nav-count">{{ waiting_count }}</span>
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="shift-card">
+          <span class="shift-indicator"></span>
+          <div><strong>Front desk</strong><span>Morning shift</span></div>
+          <span class="shift-more" aria-hidden="true">•••</span>
+        </div>
+        <div class="sidebar-foot">A calmer day, together.</div>
+      </div>
+    </aside>
+    <button class="sidebar-backdrop" type="button" aria-label="Close navigation" hidden></button>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div class="breadcrumb"><span>Clinic</span><span class="crumb-slash">/</span><strong>Overview</strong></div>
+        <div class="topbar-right">
+          <span class="live-label"><span></span> Live queue</span>
+          <div class="avatar" aria-label="Front desk staff">FD</div>
+        </div>
+      </header>
+
+      <div class="page-wrap">
+        {% if messages %}
+          <div class="messages" aria-live="polite">
+            {% for message in messages %}<p class="message message-{{ message.tags }}">{{ message }}</p>{% endfor %}
+          </div>
+        {% endif %}
+
+        <section class="welcome-row">
+          <div>
+            <p class="eyebrow">YOUR FRONT DESK, AT A GLANCE</p>
+            <h1>Good morning<span class="heading-period">.</span></h1>
+            <p class="welcome-date">{{ today|date:"l, F j, Y" }} <span class="date-divider">/</span> Here's how things are moving today.</p>
+          </div>
+          <button class="primary-button" type="button" data-open-dialog>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Add patient</span>
+          </button>
+        </section>
+
+        <section class="stats-grid" aria-label="Today's queue summary">
+          <article class="stat-block stat-waiting">
+            <div class="stat-top"><span>Waiting</span><span class="stat-symbol symbol-waiting" aria-hidden="true">···</span></div>
+            <div class="stat-value">{{ waiting_count }}</div>
+            <div class="stat-foot"><span class="tiny-dot dot-waiting"></span> In the queue</div>
+          </article>
+          <article class="stat-block stat-service">
+            <div class="stat-top"><span>In service</span><span class="stat-symbol symbol-service" aria-hidden="true">↗</span></div>
+            <div class="stat-value">{{ in_service_count }}</div>
+            <div class="stat-foot"><span class="tiny-dot dot-service"></span> With a care team</div>
+          </article>
+          <article class="stat-block stat-completed">
+            <div class="stat-top"><span>Completed</span><span class="stat-symbol symbol-completed" aria-hidden="true">✓</span></div>
+            <div class="stat-value">{{ completed_count }}</div>
+            <div class="stat-foot"><span class="tiny-dot dot-completed"></span> Visits finished</div>
+          </article>
+          <article class="stat-block stat-total">
+            <div class="stat-top"><span>Today's visits</span><span class="stat-symbol symbol-total" aria-hidden="true">◷</span></div>
+            <div class="stat-value">{{ total_count }}</div>
+            <div class="stat-foot"><span class="tiny-dot dot-total"></span> Registered today</div>
+          </article>
+        </section>
+
+        <section class="queue-section" aria-labelledby="queue-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">THE PEOPLE IN YOUR CARE</p>
+              <h2 id="queue-heading">Patient queue <span class="heading-count">{{ total_count }}</span></h2>
+            </div>
+            <form class="call-next-form" method="post" action="{% url 'clinic:call_next' %}">
+              {% csrf_token %}
+              <button class="secondary-button" type="submit" {% if not waiting_count %}disabled{% endif %}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                <span>Call next</span>
+              </button>
+            </form>
+          </div>
+
+          <div class="queue-toolbar">
+            <div class="filter-tabs" role="group" aria-label="Filter queue">
+              <a href="?status=active" class="filter-tab{% if status_filter == 'active' %} is-selected{% endif %}"{% if status_filter == 'active' %} aria-current="page"{% endif %}>Active <span>{{ waiting_count|add:in_service_count }}</span></a>
+              <a href="?status=waiting" class="filter-tab{% if status_filter == 'waiting' %} is-selected{% endif %}"{% if status_filter == 'waiting' %} aria-current="page"{% endif %}>Waiting</a>
+              <a href="?status=called" class="filter-tab{% if status_filter == 'called' %} is-selected{% endif %}"{% if status_filter == 'called' %} aria-current="page"{% endif %}>In service</a>
+              <a href="?status=completed" class="filter-tab{% if status_filter == 'completed' %} is-selected{% endif %}"{% if status_filter == 'completed' %} aria-current="page"{% endif %}>Completed</a>
+            </div>
+            <label class="search-box">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>
+              <input type="search" id="queue-search" placeholder="Find a patient" autocomplete="off" aria-label="Search patient queue">
+              <kbd>/</kbd>
+            </label>
+            <span class="sr-only" id="search-feedback" aria-live="polite"></span>
+          </div>
+
+          <div class="table-scroll">
+            <table class="queue-table">
+              <thead><tr><th scope="col">PATIENT</th><th scope="col">SERVICE</th><th scope="col">ARRIVAL</th><th scope="col">STATUS</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+              <tbody id="queue-body">
+                {% for entry in entries %}
+                  <tr class="queue-row" data-search="{{ entry.name|lower }} {{ entry.get_service_display|lower }} #{{ entry.id }} {{ entry.phone|lower }}">
+                    <td>
+                      <div class="patient-cell"><span class="patient-avatar avatar-{{ forloop.counter|divisibleby:4|yesno:'mint,coral' }}">{{ entry.name|slice:":1"|upper }}</span><div class="patient-info"><strong>{{ entry.name }}</strong><span>Queue #{{ entry.id|stringformat:"03d" }}{% if entry.phone %}<span class="patient-phone"> · {{ entry.phone }}</span>{% endif %}</span></div></div>
+                    </td>
+                    <td><span class="service-name">{{ entry.get_service_display }}</span></td>
+                    <td><time class="arrival-time" datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:"g:i A" }}</time></td>
+                    <td><span class="status-pill status-{{ entry.status }}"><span></span>{{ entry.get_status_display }}</span></td>
+                    <td class="action-cell">
+                      {% if entry.status == 'waiting' %}
+                        <form method="post" action="{% url 'clinic:update_status' entry.id 'call' %}">{% csrf_token %}<button class="row-action" type="submit">Call in</button></form>
+                      {% elif entry.status == 'called' %}
+                        <div class="row-actions"><form method="post" action="{% url 'clinic:update_status' entry.id 'return' %}">{% csrf_token %}<button class="row-action" type="submit">Return</button></form><form method="post" action="{% url 'clinic:update_status' entry.id 'complete' %}">{% csrf_token %}<button class="row-action row-action-done" type="submit">Complete</button></form></div>
+                      {% else %}<span class="completed-mark" aria-label="Visit completed">Done</span>{% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr class="empty-row"><td colspan="5"><div class="empty-state"><span class="empty-icon" aria-hidden="true">✳</span><strong>{% if status_filter == 'completed' %}No completed visits yet{% elif status_filter == 'waiting' %}No one waiting right now{% elif status_filter == 'called' %}No patients in service{% else %}Your queue is clear{% endif %}</strong><span>When a patient checks in, they'll show up here.</span><button class="text-button" type="button" data-open-dialog>Add the first patient <span aria-hidden="true">→</span></button></div></td></tr>
+                {% endfor %}
+                <tr class="no-results" id="no-results" hidden><td colspan="5"><div class="empty-state compact-empty"><strong>No matching patients</strong><span>Try another name or service.</span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <footer class="queue-footer"><span><span class="footer-live-dot"></span> Queue updates after each action</span><span>Showing {{ entries|length }} patient{{ entries|length|pluralize }}</span></footer>
+        </section>
+
+        <aside class="next-up" aria-label="Next patient">
+          <div class="next-up-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v16m-7-7 7 7 7-7"/></svg></div>
+          <div class="next-up-copy"><span>NEXT IN LINE</span>{% if next_patient %}<strong>{{ next_patient.name }}</strong><small>{{ next_patient.get_service_display }} <span>·</span> Queue #{{ next_patient.id|stringformat:"03d" }}</small>{% else %}<strong>All caught up</strong><small>There are no patients waiting right now.</small>{% endif %}</div>
+          {% if next_patient %}<span class="next-up-note">Ready when you are</span>{% endif %}
+        </aside>
+        <footer class="page-footer"><span>Careline <span class="footer-dot">·</span> Clinic queue desk</span><span>Today's care, in good hands.</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="patient-dialog" id="patient-dialog" aria-labelledby="dialog-title">
+    <form method="post" action="{% url 'clinic:add_patient' %}" class="patient-form">
+      {% csrf_token %}
+      <div class="dialog-heading"><div><p class="eyebrow">NEW ARRIVAL</p><h2 id="dialog-title">Add a patient</h2><p>Enter a few details to add them to the queue.</p></div><button class="icon-button dialog-close" type="button" aria-label="Close dialog" data-close-dialog><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <label class="form-field" for="id_name"><span>Patient name <b>*</b></span>{{ form.name }}{% if form.name.errors %}<small class="field-error">{{ form.name.errors|join:", " }}</small>{% endif %}</label>
+      <label class="form-field" for="id_phone"><span>Phone number <em>Optional</em></span>{{ form.phone }}</label>
+      <label class="form-field" for="id_service"><span>Visit type</span>{{ form.service }}</label>
+      <div class="dialog-actions"><button class="cancel-button" type="button" data-close-dialog>Cancel</button><button class="primary-button" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span>Add to queue</span></button></div>
+    </form>
+  </dialog>
+</body>
+</html>
